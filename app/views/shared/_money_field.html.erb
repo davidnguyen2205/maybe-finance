@@ -59,7 +59,8 @@
           disabled: options[:disabled],
           data: {
             "money-field-target": "amount",
-            "auto-submit-form-target": ("auto" if options[:auto_submit])
+            "auto-submit-form-target": ("auto" if options[:auto_submit]),
+            "receipt-upload-target": options[:receipt_upload_target]
           }.compact,
           required: options[:required] %>
       </div>
@@ -75,7 +76,8 @@
                           data: {
                             "money-field-target": "currency",
                             action: "change->money-field#handleCurrencyChange",
-                            "auto-submit-form-target": ("auto" if options[:auto_submit])
+                            "auto-submit-form-target": ("auto" if options[:auto_submit]),
+                            "receipt-upload-target": options[:receipt_upload_currency_target]
                           }.compact
                         } %>
         </div>

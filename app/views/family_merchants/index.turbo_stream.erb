@@ -1,0 +1,6 @@
+<%= async_combobox_options @merchants.map { |merchant| 
+  FamilyMerchantComboboxOption.new(
+    name: merchant.name,
+    id: merchant.id
+  )
+}, render_in: { partial: "family_merchants/combobox_merchant" } %>

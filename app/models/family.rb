@@ -13,6 +13,13 @@ class Family < ApplicationRecord
     [ "YYYY.MM.DD", "%Y.%m.%d" ]
   ].freeze
 
+  OCR_ENGINES = [
+    [ "Tesseract (Offline)", "tesseract" ],
+    [ "Google Vision API", "google_vision" ],
+    [ "AWS Textract", "aws_textract" ],
+    [ "Gemini", "gemini" ]
+  ].freeze
+
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
@@ -35,6 +42,7 @@ class Family < ApplicationRecord
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
+  validates :ocr_engine, inclusion: { in: OCR_ENGINES.map(&:last) }
 
   def assigned_merchants
     merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq

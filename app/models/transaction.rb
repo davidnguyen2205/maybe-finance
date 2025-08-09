@@ -7,6 +7,9 @@ class Transaction < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  # Receipt attachment for OCR processing
+  has_one_attached :receipt
+
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   enum :kind, {

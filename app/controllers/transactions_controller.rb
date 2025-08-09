@@ -128,8 +128,15 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :merchant_id, :merchant_name, :kind, :receipt, { tag_ids: [] } ]
       )
+
+      # Handle merchant name from combobox
+      if entry_params[:entryable_attributes] && entry_params[:entryable_attributes][:merchant_name].present?
+        merchant_name = entry_params[:entryable_attributes].delete(:merchant_name)
+        merchant = FamilyMerchant.find_or_create_by(name: merchant_name.strip, family: Current.family)
+        entry_params[:entryable_attributes][:merchant_id] = merchant.id
+      end
 
       nature = entry_params.delete(:nature)
 

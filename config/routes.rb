@@ -2,6 +2,8 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  # Receipt processing for OCR
+  post '/receipts/process', to: 'receipts#upload'
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do

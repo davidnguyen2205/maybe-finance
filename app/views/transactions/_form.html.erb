@@ -1,6 +1,6 @@
 <%# locals: (entry:, income_categories:, expense_categories:) %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4" do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "receipt-upload" } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
@@ -12,8 +12,68 @@
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
   </section>
 
+  <!-- Receipt Upload Section -->
   <section class="space-y-2">
-    <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
+    <div class="form-field">
+      <label class="form-field__label">Receipt Upload (Optional)</label>
+      <div class="space-y-2">
+        <%= f.fields_for :entryable do |ef| %>
+          <%= ef.file_field :receipt, 
+                accept: "image/*",
+                class: "hidden",
+                data: { 
+                  "receipt-upload-target": "fileInput",
+                  action: "change->receipt-upload#handleFileSelect"
+                } %>
+        <% end %>
+        
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+             data-receipt-upload-target="dropZone"
+             data-action="click->receipt-upload#triggerFileSelect dragover->receipt-upload#handleDragOver drop->receipt-upload#handleDrop">
+          <div data-receipt-upload-target="uploadPrompt">
+            <%= icon "upload", class: "mx-auto h-12 w-12 text-gray-400" %>
+            <p class="mt-2 text-sm text-gray-600">
+              Click to upload receipt or drag and drop
+            </p>
+            <p class="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
+          </div>
+          
+          <div data-receipt-upload-target="preview" class="hidden">
+            <img data-receipt-upload-target="previewImage" class="mx-auto max-h-32 rounded">
+            <p data-receipt-upload-target="fileName" class="mt-2 text-sm text-gray-600"></p>
+            <button type="button" 
+                    class="mt-2 text-sm text-red-600 hover:text-red-800"
+                    data-action="click->receipt-upload#removeFile">
+              Remove
+            </button>
+          </div>
+          
+          <div data-receipt-upload-target="processing" class="hidden">
+            <%= icon "loader-2", class: "mx-auto h-8 w-8 text-blue-600 animate-spin" %>
+            <p class="mt-2 text-sm text-gray-600">Processing receipt...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="space-y-2">
+    <%= f.text_field :name, 
+          label: t(".description"), 
+          placeholder: t(".description_placeholder"), 
+          required: true,
+          data: { "receipt-upload-target": "nameField" } %>
+
+    <%= f.fields_for :entryable do |ef| %>
+      <div class="form-field combobox">
+        <%= ef.combobox :merchant_name,
+                       family_merchants_path,
+                       name_when_new: "entry[entryable_attributes][merchant_name]",
+                       label: "Merchant",
+                       placeholder: "Enter or select merchant",
+                       data: { "receipt-upload-target": "merchantField" } %>
+      </div>
+    <% end %>
 
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id %>
@@ -21,12 +81,25 @@
       <%= f.collection_select :account_id, Current.family.accounts.manual.active.alphabetically, :id, :name, { prompt: t(".account_prompt"), label: t(".account") }, required: true, class: "form-field__input text-ellipsis" %>
     <% end %>
 
-    <%= f.money_field :amount, label: t(".amount"), required: true %>
+    <%= f.money_field :amount, 
+          label: t(".amount"), 
+          required: true,
+          receipt_upload_target: "amountField",
+          receipt_upload_currency_target: "currencyField" %>
     <%= f.fields_for :entryable do |ef| %>
       <% categories = params[:nature] == "inflow" ? income_categories : expense_categories %>
-      <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category") } %>
+      <%= ef.collection_select :category_id, 
+            categories, :id, :name, 
+            { prompt: t(".category_prompt"), label: t(".category") },
+            { data: { "receipt-upload-target": "categoryField" } } %>
     <% end %>
-    <%= f.date_field :date, label: t(".date"), required: true, min: Entry.min_supported_date, max: Date.current, value: Date.current %>
+    <%= f.date_field :date, 
+          label: t(".date"), 
+          required: true, 
+          min: Entry.min_supported_date, 
+          max: Date.current, 
+          value: Date.current,
+          data: { "receipt-upload-target": "dateField" } %>
   </section>
 
   <%= render DS::Disclosure.new(title: t(".details")) do %>
@@ -44,7 +117,8 @@
                     label: t(".note_label"),
                     placeholder: t(".note_placeholder"),
                     rows: 5,
-                    "data-auto-submit-form-target": "auto" %>
+                    "data-auto-submit-form-target": "auto",
+                    data: { "receipt-upload-target": "notesField" } %>
   <% end %>
 
   <section>

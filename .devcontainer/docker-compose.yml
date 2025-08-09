@@ -1,6 +1,6 @@
 x-db-env: &db_env
   POSTGRES_USER: postgres
-  POSTGRES_DB: postgres
+  POSTGRES_DB: maybe_development
   POSTGRES_PASSWORD: postgres
 
 x-rails-env: &rails_env
@@ -8,8 +8,17 @@ x-rails-env: &rails_env
   HOST: "0.0.0.0"
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
+  POSTGRES_DB: maybe_development
   BUNDLE_PATH: /bundle
   REDIS_URL: redis://redis:6379/1
+  RAILS_ENV: development
+  NODE_ENV: development
+  # Development convenience variables
+  RAILS_LOG_LEVEL: debug
+  RAILS_MAX_THREADS: 5
+  WEB_CONCURRENCY: 1
+  # Custom app name
+  APP_NAME: Expenso
 
 services:
   app:
@@ -20,9 +29,15 @@ services:
     volumes:
       - ..:/workspace:cached
       - bundle_cache:/bundle
+      - node_modules_cache:/workspace/node_modules
+      # Cache directories for faster rebuilds
+      - gem_cache:/usr/local/lib/ruby/gems
+      - ~/.gitconfig:/home/vscode/.gitconfig:ro
+      - ~/.ssh:/home/vscode/.ssh:ro
 
     ports:
       - "3000:3000"
+      - "3001:3001"  # For potential additional services
 
     command: sleep infinity
 
@@ -30,8 +45,16 @@ services:
       <<: *rails_env
 
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    # Enable debugging
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
 
   worker:
     build:
@@ -39,29 +62,99 @@ services:
       dockerfile: .devcontainer/Dockerfile
     command: bundle exec sidekiq
     restart: unless-stopped
+    volumes:
+      - ..:/workspace:cached
+      - bundle_cache:/bundle
+      - node_modules_cache:/workspace/node_modules
     environment:
       <<: *rails_env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
 
   redis:
-    image: redis:latest
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     restart: unless-stopped
     volumes:
       - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   db:
-    image: postgres:latest
+    image: postgres:16-alpine
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       <<: *db_env
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d maybe_development"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    command: >
+      postgres
+      -c log_statement=all
+      -c log_min_duration_statement=0
+      -c log_line_prefix='%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+
+  # Optional: Add pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@maybe.co
+      PGADMIN_DEFAULT_PASSWORD: password
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - tools
+
+  # Optional: Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - tools
 
 volumes:
   postgres-data:
+    driver: local
   redis-data:
+    driver: local
   bundle_cache:
+    driver: local
+  node_modules_cache:
+    driver: local
+  gem_cache:
+    driver: local
+  pgadmin-data:
+    driver: local

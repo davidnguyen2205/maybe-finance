@@ -62,6 +62,10 @@ module ApplicationHelper
     end
   end
 
+  def app_name
+    ENV.fetch("APP_NAME", "Maybe")
+  end
+
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 

@@ -41,6 +41,65 @@
   </div>
 <% end %>
 
+<%= settings_section title: "Receipt OCR", subtitle: "Configure optical character recognition for receipt processing" do %>
+  <div>
+    <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form ocr-settings" } do |form| %>
+      <%= form.hidden_field :redirect_to, value: "preferences" %>
+
+      <%= form.fields_for :family do |family_form| %>
+        <%= family_form.select :ocr_engine,
+            Family::OCR_ENGINES,
+            { label: "OCR Engine" },
+            { data: { auto_submit_form_target: "auto", action: "change->ocr-settings#showApiKeyField" } } %>
+        
+        <div class="text-xs text-secondary space-y-2 mb-4">
+          <p class="text-primary font-medium">Current: <%= @user.family.ocr_engine.humanize %></p>
+          <p><strong>Tesseract (Offline):</strong> Free, works offline, good for basic receipts. No API key required.</p>
+          <p><strong>Google Vision API:</strong> Highly accurate, requires API key. Best for complex receipts and invoices.</p>
+          <p><strong>AWS Textract:</strong> Excellent for structured documents, requires AWS credentials.</p>
+          <p><strong>Gemini:</strong> Google's latest multimodal AI, excellent for complex documents. Requires API key.</p>
+        </div>
+
+        <!-- Google Vision API Key -->
+        <div data-ocr-settings-target="googleVisionFields" class="<%= 'hidden' unless @user.family.ocr_engine == 'google_vision' %>">
+          <%= family_form.text_field :google_vision_api_key,
+              label: "Google Vision API Key",
+              placeholder: "Enter your Google Vision API key",
+              type: "password",
+              data: { auto_submit_form_target: "auto" } %>
+          <p class="text-xs text-secondary mt-1">
+            Get your API key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="underline">Google Cloud Console</a>
+          </p>
+        </div>
+
+        <!-- AWS Textract API Key -->
+        <div data-ocr-settings-target="awsTextractFields" class="<%= 'hidden' unless @user.family.ocr_engine == 'aws_textract' %>">
+          <%= family_form.text_field :aws_textract_api_key,
+              label: "AWS Access Key (JSON format)",
+              placeholder: '{"accessKeyId": "your-key", "secretAccessKey": "your-secret", "region": "us-east-1"}',
+              type: "password",
+              data: { auto_submit_form_target: "auto" } %>
+          <p class="text-xs text-secondary mt-1">
+            Get your credentials from <a href="https://console.aws.amazon.com/iam/" target="_blank" class="underline">AWS IAM Console</a>
+          </p>
+        </div>
+
+        <!-- Gemini API Key -->
+        <div data-ocr-settings-target="geminiFields" class="<%= 'hidden' unless @user.family.ocr_engine == 'gemini' %>">
+          <%= family_form.text_field :gemini_api_key,
+              label: "Gemini API Key",
+              placeholder: "Enter your Gemini API key",
+              type: "password",
+              data: { auto_submit_form_target: "auto" } %>
+          <p class="text-xs text-secondary mt-1">
+            Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" class="underline">Google AI Studio</a>
+          </p>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
 <%= settings_section title: t(".theme_title"), subtitle: t(".theme_subtitle") do %>
   <div data-controller="theme" data-theme-user-preference-value="<%= @user.theme %>">
     <%= form_with model: @user, class: "flex flex-col md:flex-row justify-between items-center gap-4", id: "theme_form",

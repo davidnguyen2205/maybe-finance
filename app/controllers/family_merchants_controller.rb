@@ -4,9 +4,15 @@ class FamilyMerchantsController < ApplicationController
   def index
     @breadcrumbs = [ [ "Home", root_path ], [ "Merchants", nil ] ]
 
-    @family_merchants = Current.family.merchants.alphabetically
-
-    render layout: "settings"
+    if request.format.turbo_stream?
+      # Handle combobox search requests - follow securities pattern
+      query = params[:q].to_s.strip
+      @merchants = Current.family.merchants.alphabetically
+      @merchants = @merchants.where("name ILIKE ?", "%#{query}%") if query.present?
+    else
+      @family_merchants = Current.family.merchants.alphabetically
+      render layout: "settings"
+    end
   end
 
   def new

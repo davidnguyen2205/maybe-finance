@@ -1,0 +1,15 @@
+<%# The hotwire_combobox gem passes combobox_display and combobox_value as keyword arguments %>
+<%# locals: (combobox_display:, combobox_value:, **) %>
+<div class="flex items-center">
+  <%= render DS::FilledIcon.new(
+    variant: :text,
+    text: combobox_display,
+    size: "sm",
+    rounded: true
+  ) %>
+  <div class="ml-2">
+    <span class="text-sm font-medium">
+      <%= combobox_display %>
+    </span>
+  </div>
+</div>
